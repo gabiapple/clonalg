@@ -19,7 +19,7 @@ class Clonalg:
         # initialize population
         random.seed()
 
-        self.results = np.zeros(3)
+        self.results = np.zeros((3, self.max_it)) # 3: max, min and average
         self.population = np.random.randint(limits[0], limits[1], size=(self.N, 2))
 
     def select(self, population, fitness):
@@ -34,12 +34,9 @@ class Clonalg:
 
     def select_clones(self, population, fitness):
         # multimodal: select the best clone for each antibody and generate new population
-        new_population = np.zeros((self.N, 2))
         for i in range(0, self.N, self.nc):
             best = np.argmax(fitness[i * self.nc : i * self.nc + self.nc])
-            new_population[i] = population[best]
-
-        return new_population
+            self.population[i] = population[best]
 
     def clone(self, antibodies, fitness):
         fitness_clones = np.zeros(len(antibodies) * self.nc)
@@ -77,29 +74,48 @@ class Clonalg:
 
     def clonalg_opt(self):
         t = 1
-        while t <= self.max_it:
+        while t < self.max_it:
             self.fitness = np.apply_along_axis(self.evaluation, 1, self.population)
+            
+            self.results[0][t] = np.amax(self.fitness)
+            self.results[1][t] = np.amin(self.fitness)
+            self.results[2][t] = np.average(self.fitness)
+
             population_select, fitness_select = self.select(self.population, self.fitness)
+
             clones, fitness_clones = self.clone(population_select, fitness_select)
+
             fitness_clones_normalized = self.normalize(fitness_clones)
+
             clones_mutated = self.mutation(clones, fitness_clones_normalized)
+
             fitness_clones = np.apply_along_axis(self.evaluation, 1, clones_mutated)
-            self.population = self.select_clones(clones_mutated, fitness_clones)
+
+            self.select_clones(clones_mutated, fitness_clones)
+
             self.replace()
             t = t + 1
+
+    def graph(self):
+        plt.plot(self.results[0], label="Best evaluation")
+        plt.plot(self.results[1], label="Worst evaluation")
+        plt.plot(self.results[2], label="Average")
+        plt.legend(loc='best')
+        plt.show()
 
     def result(self):
         b = self.fitness.argmax(axis=0)
 
-        return (self.population[b], self.fitness[b])
+        return (self.population[b], self.fitness[b] * (-1))
 
 
 def eggholder(args):
         x1 = args[0]; x2 = args[1];
         y = -(x2 + 47)*math.sin(math.sqrt(abs(x2 + x1/2 + 47))) - x1*math.sin(math.sqrt(abs(x1 - (x2 + 47))))
-        return y*(-1) + 1500
+        return y*(-1)
 
 clonalg = Clonalg(50, 50, 0, 5, 0.1, (-512, 512), eggholder)
 clonalg.clonalg_opt()
 print(clonalg.result())
+clonalg.graph()
 
