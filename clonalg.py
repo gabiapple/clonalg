@@ -34,15 +34,21 @@ class Clonalg:
 
     def select_clones(self, population, fitness):
         # multimodal: select the best clone for each antibody and generate new population
-        pass
+        new_population = np.zeros((self.N, 2))
+        for i in range(0, self.N, self.nc):
+            best = np.argmax(fitness[i * self.nc : i * self.nc + self.nc])
+            new_population[i] = population[best]
+
+        return new_population
 
     def clone(self, antibodies, fitness):
         fitness_clones = np.zeros(len(antibodies) * self.nc)
         clones = []
         for i, antibody in enumerate(antibodies):
-            for j in range(0,self.nc):
+            for j in range(i * self.nc, i * self.nc + self.nc):
                 clones.append(antibody)
-                fitness_clones[i+j] = fitness[i]
+                fitness_clones[j] = fitness[i]
+            i += self.nc
 
         return clones, fitness_clones
 
@@ -57,10 +63,11 @@ class Clonalg:
             if(pb > alpha):
                 continue
 
-            delta = clones[i][0] * alpha * random.choice([0,1])
-            clones[i][0] = math.fmod(clones[i][0] + delta, self.limits[1])
+            random.seed()
 
-            delta = clones[i][1] * alpha * random.choice([0,1])
+            delta = clones[i][0] * alpha * random.choice([0.01,1])
+            clones[i][0] = math.fmod(clones[i][0] + delta, self.limits[1])
+            delta = clones[i][1] * alpha * random.choice([0.01,1])
             clones[i][1] = math.fmod(clones[i][1] + delta, self.limits[1])
         return clones
 
@@ -77,7 +84,7 @@ class Clonalg:
             fitness_clones_normalized = self.normalize(fitness_clones)
             clones_mutated = self.mutation(clones, fitness_clones_normalized)
             fitness_clones = np.apply_along_axis(self.evaluation, 1, clones_mutated)
-            self.select_clones(clones_mutated, fitness_clones)
+            self.population = self.select_clones(clones_mutated, fitness_clones)
             self.replace()
             t = t + 1
 
